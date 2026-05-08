@@ -6,6 +6,7 @@ from scipy.stats import kurtosis, skew
 from scipy.fft import fft, fftfreq
 import joblib
 import matplotlib.pyplot as plt
+import plotly.graph_objects as go
 
 st.set_page_config(page_title="Wind Turbine ML Diagnostics", layout="wide")
 
@@ -32,13 +33,71 @@ if uploaded_file is not None:
         sample_rate = 40000
         chunk = signal[:sample_rate] 
         
-        # Plot the raw signal
-        st.subheader("Raw Vibration Signal (1-Second Snapshot)")
-        fig, ax = plt.subplots(figsize=(10, 3))
-        ax.plot(chunk, color='#1f77b4', alpha=0.8)
-        ax.set_ylabel("Acceleration (m/s^2)")
-        ax.set_xlabel("Samples")
-        st.pyplot(fig)
+        # # Plot the raw signal
+        # st.subheader("Raw Vibration Signal (1-Second Snapshot)")
+        # fig, ax = plt.subplots(figsize=(10, 3))
+        # ax.plot(chunk, color='#1f77b4', alpha=0.8)
+        # ax.set_ylabel("Acceleration (m/s^2)")
+        # ax.set_xlabel("Samples")
+        # st.pyplot(fig)
+
+        
+        # --- HIGH-PERFORMANCE INTERACTIVE PLOTTING ---
+        st.subheader("Interactive Vibration Signature")
+        
+        # 1. Downsample the 2.4 Million points so the browser doesn't crash
+        # Taking every 50th point. It preserves the exact visual shape of the wave!
+        render_step = 50 
+        x_vals = np.arange(len(signal))[::render_step]
+        y_vals = signal[::render_step]
+        
+        # 2. Define what a "Fault Point" looks like visually
+        # We will flag any impact spike that exceeds 3x the normal RMS energy
+        rms_full = np.sqrt(np.mean(signal**2))
+        impact_threshold = rms_full * 3
+        
+        # 3. Build the Plotly Graph
+        fig = go.Figure()
+        
+        # Add the main blue wave (using Scattergl for high performance rendering)
+        fig.add_trace(go.Scattergl(
+            x=x_vals,
+            y=y_vals,
+            mode='lines',
+            name='Vibration Wave',
+            line=dict(color='#00d4ff', width=1), # A sleek, modern cyan
+            opacity=0.8
+        ))
+        
+        # Find the violent spikes and paint them red
+        fault_x = [x for x, y in zip(x_vals, y_vals) if abs(y) > impact_threshold]
+        fault_y = [y for y in y_vals if abs(y) > impact_threshold]
+        
+        if fault_x:
+            fig.add_trace(go.Scattergl(
+                x=fault_x,
+                y=fault_y,
+                mode='markers',
+                name='Anomalous Impacts',
+                marker=dict(color='#ff3333', size=6, symbol='x') # Bright red X's
+            ))
+            
+        # Make the UI look incredibly premium
+        fig.update_layout(
+            template="plotly_dark", # Dark mode instantly makes it look pro
+            xaxis_title="Time (Samples)",
+            yaxis_title="Acceleration (m/s²)",
+            margin=dict(l=0, r=0, t=30, b=0),
+            height=400,
+            hovermode="x unified",
+            legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+        )
+        
+        # Display in Streamlit
+        st.plotly_chart(fig, use_container_width=True)
+
+
+
         
         # --- FEATURE EXTRACTION ---
         # 1. Time Domain
