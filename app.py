@@ -78,7 +78,7 @@ if uploaded_file is not None:
             st.success(f"✅ SYSTEM HEALTHY (Confidence: {confidence:.1f}%)")
             st.write("**Analysis:** Vibration levels are consistent with normal operating parameters.")
 
-        st.subheader("Extracted DSP Features (1-Second Snapshot)")
+        st.subheader("Extracted DSP Features")
         col1, col2, col3, col4 = st.columns(4)
         col1.metric("RMS (Energy)", f"{rms:.4f}")
         col2.metric("Kurtosis", f"{kurt:.4f}")
